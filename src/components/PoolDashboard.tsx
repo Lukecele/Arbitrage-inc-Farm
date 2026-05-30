@@ -43,6 +43,7 @@ export default function PoolDashboard() {
   const address = wallet?.accounts[0].address;
   const { positions, addPosition } = usePortfolio(address);
   const [selectedPool, setSelectedPool] = useState<PoolInfo | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [view, setView] = useState<'VAULTS' | 'PORTFOLIO' | 'TREASURY'>('VAULTS');
 
@@ -66,8 +67,13 @@ export default function PoolDashboard() {
         <div className="w-full max-w-[480px]">
           <ZapWidget
             initialPool={selectedPool}
-            onClose={() => setSelectedPool(null)}
-            onSuccess={(amountUSD, nftId) => addPosition(selectedPool, amountUSD, nftId)}
+            initialTab={selectedPosition ? 'OUT' : 'IN'}
+            initialNftId={selectedPosition?.nftId}
+            onClose={() => {
+              setSelectedPool(null);
+              setSelectedPosition(null);
+            }}
+            onSuccess={(amountUSD, nftId) => addPosition(selectedPool, amountUSD, nftId || selectedPosition?.nftId)}
           />
         </div>
       </div>
@@ -303,8 +309,11 @@ export default function PoolDashboard() {
 
                 return (
                   <div
-                    key={p.poolId}
-                    onClick={() => setSelectedPool(livePool)}
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPool(livePool);
+                      setSelectedPosition(p);
+                    }}
                     className="bg-[#131A2A] border border-[#1E293B] hover:border-amber-500/50 cursor-pointer transition-all rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 group"
                   >
                     <div className="flex items-center gap-4">
@@ -325,6 +334,11 @@ export default function PoolDashboard() {
                           <h4 className="text-lg font-bold text-white group-hover:text-amber-500 transition-colors">
                             {livePool?.name}
                           </h4>
+                          {p.nftId && (
+                            <span className="text-[9px] font-bold tracking-wider uppercase text-slate-300 bg-slate-800/80 px-1.5 py-0.5 rounded-md border border-slate-700/60">
+                              NFT #{p.nftId}
+                            </span>
+                          )}
                           {!inRange && (
                             <span className="text-[9px] font-bold tracking-wider uppercase text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded-md border border-red-500/30">
                               FUORI RANGE

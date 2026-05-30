@@ -10,21 +10,25 @@ import { ethers } from 'ethers';
 
 export default function ZapWidget({ 
   initialPool, 
+  initialTab,
+  initialNftId,
   onClose,
   onSuccess
 }: { 
   initialPool?: any, // Accept BeefyVault or MOCK_POOL
+  initialTab?: 'IN'|'OUT',
+  initialNftId?: string,
   onClose?: () => void,
   onSuccess?: (amountUSD: number, nftId?: string) => void
 }) {
   const [{ wallet }] = useConnectWallet();
-  const [tab, setTab] = useState<'IN'|'OUT'>('IN');
+  const [tab, setTab] = useState<'IN'|'OUT'>(initialTab || 'IN');
   
   // Selection States
   const [tokenIn, setTokenIn] = useState(SUPPORTED_TOKENS[0]); // BNB Default
   const [tokenOut, setTokenOut] = useState(SUPPORTED_TOKENS[2]); // USDC Default
   const [amount, setAmount] = useState('');
-  const [nftPositionId, setNftPositionId] = useState('');
+  const [nftPositionId, setNftPositionId] = useState(initialNftId || '');
   const [manualNftId, setManualNftId] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const { getPrice } = useTokenPrices();
@@ -190,6 +194,18 @@ export default function ZapWidget({
       }
     }
   }, [detectedPositions, tab, nftPositionId]);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setTab(initialTab);
+    }
+  }, [initialTab]);
+
+  React.useEffect(() => {
+    if (tab === 'OUT' && initialNftId) {
+      setNftPositionId(initialNftId);
+    }
+  }, [tab, initialNftId]);
 
   const selectedPos = detectedPositions.find(p => p.id === nftPositionId);
   const matchingPositions = detectedPositions.filter(p => p.isMatch);
