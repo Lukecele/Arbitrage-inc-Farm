@@ -35,10 +35,11 @@ async function fetchApyFromKyber(poolAddresses: string[]): Promise<Map<string, P
       }
     `;
     
-    const res = await fetch('https://api.thegraph.com/subgraphs/name/kybernetwork/kyberswap-elastic-bsc', {
+    // Use serverless proxy to avoid CORS issues from browser
+    const res = await fetch('/api/proxy-kyber', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ upstream: 'kyber', query }),
       signal: AbortSignal.timeout(6000)
     });
     
@@ -91,10 +92,10 @@ async function fetchApyFromPancake(poolAddresses: string[]): Promise<Map<string,
       }
     `;
     
-    const res = await fetch('https://api.thegraph.com/subgraphs/name/pancakeswap/exchange-v3-bsc', {
+    const res = await fetch('/api/proxy-kyber', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ upstream: 'pancake', query }),
       signal: AbortSignal.timeout(6000)
     });
     

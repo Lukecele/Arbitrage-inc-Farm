@@ -135,7 +135,7 @@ export default function PoolDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPools.map((pool) => (
+              {filteredPools.map((pool) => (
               <div
                 key={pool.id}
                 className={`bg-[#131A2A] border ${
@@ -144,8 +144,11 @@ export default function PoolDashboard() {
                     : pool.risk === 'High'
                     ? 'border-orange-500/30 hover:border-orange-500'
                     : 'border-[#1E293B] hover:border-slate-500'
-                } rounded-2xl p-5 transition-colors cursor-pointer group shadow-lg relative overflow-hidden`}
-                onClick={() => setSelectedPool(pool)}
+                } rounded-2xl p-5 transition-colors ${pool.isInRange === false ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'} group shadow-lg relative overflow-hidden`}
+                onClick={() => {
+                  if (pool.isInRange === false) return; // prevent zapping out-of-range pools
+                  setSelectedPool(pool);
+                }}
               >
                 {pool.risk === 'Extreme' && (
                   <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">

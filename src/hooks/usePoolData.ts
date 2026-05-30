@@ -52,10 +52,11 @@ async function fetchKyberPoolData(poolIds: string[]): Promise<Map<string, KyberP
       }
     `;
     
-    const res = await fetch('https://api.thegraph.com/subgraphs/name/kybernetwork/kyberswap-elastic-bsc', {
+    // Call serverless proxy to avoid CORS redirect/preflight issues when running from a browser
+    const res = await fetch('/api/proxy-kyber', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ upstream: 'kyber', query }),
       signal: AbortSignal.timeout(8000)
     });
     

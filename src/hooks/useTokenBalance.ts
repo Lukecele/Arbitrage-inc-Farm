@@ -21,21 +21,12 @@ export function useTokenBalance(tokenAddress: string, targetAddress?: string) {
       try {
         setLoading(true);
         
-        // Create provider - use JsonRpcProvider for ethers v5 compatibility
+        // Create provider - if there's an injected EIP-1193 provider, wrap it with Web3Provider
         let provider;
         if (wallet?.provider) {
-          // For ethers v5, we use the provider's host if available
-          // or fallback to a public RPC for BSC
-          try {
-            provider = new ethers.providers.JsonRpcProvider(
-              wallet.provider.rpcUrl || "https://bsc-dataseed.binance.org/"
-            );
-          } catch {
-            // Fallback if provider doesn't have rpcUrl
-            provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
-          }
+          provider = new ethers.providers.Web3Provider(wallet.provider as any);
         } else {
-          // Use BSC public RPC
+          // Use BSC public RPC as fallback
           provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
         }
         

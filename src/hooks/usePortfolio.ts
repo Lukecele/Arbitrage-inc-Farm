@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { STATIC_POOLS } from '../lib/constants';
 
 export interface Position {
   poolId: string;
@@ -130,6 +131,73 @@ export function usePortfolio(walletAddress?: string) {
       setLoading(false);
     }
   };
+
+  // Auto-detect external LP token deposits (not present in localStorage)
+  const detectExternalDeposits = async () => {
+    if (!walletAddress) return;
+    try {
+      const provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+      const scanPools = STATIC_POOLS.slice(0, 80); // limit to first 80 pools to avoid heavy scans
+
+      const newPositions: Position[] = [];
+      for (const pool of scanPools) {
+        try {
+          // pools use `id` as the on-chain pool/token contract address
+          const poolAddress = (pool as any).address || pool.id;
+          if (!poolAddress) continue;
+          const token = new ethers.Contract(poolAddress, ERC20_ABI, provider);
+          const [bal, totalSupply] = await Promise.all([
+            token.balanceOf(walletAddress),
+            token.totalSupply ? token.totalSupply().catch(() => null) : Promise.resolve(null)
+          ]);
+          const balNum = parseFloat(ethers.utils.formatUnits(bal, 18));
+          if (balNum > 0) {
+            // Estimate USD value: use pool.tvl and totalSupply if available
+            let estimatedUsd = pool.tvl || 0;
+            if (totalSupply) {
+              const ts = parseFloat(ethers.utils.formatUnits(totalSupply, 18)) || 1;
+              estimatedUsd = ((balNum / ts) * (pool.tvl || 0)) || 0;
+            }
+            newPositions.push({
+              poolId: pool.id,
+              pool,
+              amountUSD: parseFloat(estimatedUsd.toFixed(2)),
+              nftId: undefined,
+              minPrice: pool.minPrice,
+              maxPrice: pool.maxPrice,
+              balanceToken0: undefined,
+              balanceToken1: undefined,
+              realizedBalance: parseFloat(estimatedUsd.toFixed(2))
+            });
+          }
+        } catch (err) {
+          // ignore per-pool errors
+        }
+      }
+
+      if (newPositions.length > 0) {
+        setPositions(prev => {
+          // merge without duplicating existing poolIds
+          const existingIds = new Set(prev.map(p => p.poolId));
+          const merged = [...prev];
+          for (const np of newPositions) if (!existingIds.has(np.poolId)) merged.push(np);
+          localStorage.setItem(`portfolio_v1_${walletAddress.toLowerCase()}`, JSON.stringify(merged));
+          return merged;
+        });
+      }
+    } catch (err) {
+      console.warn('External deposit detection failed:', err);
+    }
+  };
+
+  // Trigger detection after initial load and on wallet change
+  useEffect(() => {
+    if (!walletAddress) return;
+    detectExternalDeposits();
+    // run again every 60s when connected
+    const id = setInterval(detectExternalDeposits, 60_000);
+    return () => clearInterval(id);
+  }, [walletAddress]);
 
   const addPosition = (pool: any, amountUSD: number, nftId?: string) => {
     if (!walletAddress) return;
