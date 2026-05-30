@@ -2,7 +2,7 @@ import React from 'react';
 import { useConnectWallet } from '@web3-onboard/react';
 import { Home, Layers, Activity, Settings, Wallet, Menu, Zap } from 'lucide-react';
 
-import logo from '../../assets/images/arbitrage_inception_logo_1780109116033.png';
+const logo = 'https://raw.githubusercontent.com/Lukecele/Arbitrage-inc-Farm/main/src/assets/images/arbitrage_inception_logo_1780109116033.png';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [{ wallet, connecting }, connect, disconnect] = useConnectWallet();
