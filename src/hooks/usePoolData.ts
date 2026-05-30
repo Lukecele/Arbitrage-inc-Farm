@@ -31,25 +31,61 @@ interface KyberPoolData {
   tvlUSD: number;
 }
 
-// Try to fetch APY + TVL from KyberSwap Elastic subgraph (BSC)
+// Try to fetch APY + TVL from Kyber Elastic subgraph (BSC)
 // Falls back silently on error — the UI still works with static seeds.
 async function fetchKyberPoolData(poolIds: string[]): Promise<Map<string, KyberPoolData>> {
   const map = new Map<string, KyberPoolData>();
   try {
-    const url = `https://zap-api.kyberswap.com/bsc/api/v1/pools?ids=${poolIds.join(',')}&page=1&size=${poolIds.length}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    // Use GraphQL query for Kyber Elastic subgraph (correct endpoint)
+    const poolIdList = poolIds.map(id => `"${id.toLowerCase()}"`).join(',');
+    const query = `
+      query {
+        pools(where: { id_in: [${poolIdList}] }) {
+          id
+          totalValueLockedUSD
+          feeTier
+          poolDayData(first: 1, orderBy: date, orderDirection: desc) {
+            volumeUSD
+            feesUSD
+          }
+        }
+      }
+    `;
+    
+    const res = await fetch('https://api.thegraph.com/subgraphs/name/kybernetwork/kyberswap-elastic-bsc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(8000)
+    });
+    
     if (!res.ok) return map;
     const json = await res.json();
-    const pools: any[] = json?.data?.pools ?? json?.pools ?? [];
+    const pools: any[] = json?.data?.pools ?? [];
+    
     for (const p of pools) {
-      const id = (p.id ?? p.address ?? '').toLowerCase();
+      const id = (p.id ?? '').toLowerCase();
       if (!id) continue;
-      const apr = parseFloat(p.apr ?? p.feesUSD24h ?? '0');
-      const tvl = parseFloat(p.tvlUSD ?? p.totalValueLockedUSD ?? '0');
+      
+      // Compute APR from fee data
+      let apr = 0;
+      const tvlUSD = parseFloat(p.totalValueLockedUSD ?? '0') || 1000;
+      const feesUSD24h = parseFloat(p.poolDayData?.[0]?.feesUSD ?? '0') || 0;
+      
+      if (tvlUSD > 1000 && feesUSD24h > 0) {
+        // APR = (24h fees * 365) / TVL (as percentage: multiply by 100)
+        apr = (feesUSD24h * 365 * 100) / tvlUSD;
+      }
+      
+      const tvl = parseFloat(p.totalValueLockedUSD ?? '0');
+      // apr is already in percentage (0-100), store it as is
       map.set(id, { id, apr: isNaN(apr) ? 0 : apr, tvlUSD: isNaN(tvl) ? 0 : tvl });
     }
-  } catch {
-    // Silently degrade
+  } catch (error) {
+    // Silently degrade - log only in dev
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('KyberSwap pool data fetch failed:', error);
+    }
   }
   return map;
 }
@@ -73,8 +109,8 @@ export function usePoolData(livePrices: TokenPrices) {
       const live = kyberData.get(base.id.toLowerCase());
 
       // APY: use live if meaningful, else keep static seed
-      const liveApy = live?.apr && live.apr > 0 ? live.apr * 100 : null;
-      const apy = liveApy !== null ? parseFloat(liveApy.toFixed(2)) : base.apy;
+      // Note: live.apr is already in percentage (0-100)
+      const apy = live?.apr && live.apr > 0 ? parseFloat(live.apr.toFixed(2)) : base.apy;
 
       // TVL: use live if meaningful, else keep static seed
       const tvl = live?.tvlUSD && live.tvlUSD > 1000 ? live.tvlUSD : base.tvl;

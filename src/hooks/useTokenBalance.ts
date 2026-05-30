@@ -20,10 +20,24 @@ export function useTokenBalance(tokenAddress: string, targetAddress?: string) {
       
       try {
         setLoading(true);
-        // Use a default provider for reading if not connected
-        const provider = wallet 
-            ? new ethers.providers.Web3Provider(wallet.provider)
-            : ethers.getDefaultProvider("https://bsc-dataseed.binance.org/");
+        
+        // Create provider - use JsonRpcProvider for ethers v5 compatibility
+        let provider;
+        if (wallet?.provider) {
+          // For ethers v5, we use the provider's host if available
+          // or fallback to a public RPC for BSC
+          try {
+            provider = new ethers.providers.JsonRpcProvider(
+              wallet.provider.rpcUrl || "https://bsc-dataseed.binance.org/"
+            );
+          } catch {
+            // Fallback if provider doesn't have rpcUrl
+            provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+          }
+        } else {
+          // Use BSC public RPC
+          provider = new ethers.providers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        }
         
         if (tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee') {
           const bal = await provider.getBalance(address);
