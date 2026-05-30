@@ -1,0 +1,6 @@
+{
+  "name": "Arbitrage Inception Zap",
+  "description": "Porta d'accesso avanzata per la liquidità concentrata su BSC. Zap In & Out con un click.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
