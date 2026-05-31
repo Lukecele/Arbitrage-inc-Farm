@@ -1189,11 +1189,19 @@ export function useBeefyLive() {
               isVerified: false,
             };
 
-            // Eseguiamo il merge adattivo con il database locale
+            // Eseguiamo il merge adattivo con il database locale.
+            // Usiamo startsWith per gestire nomi composti nel DB:
+            // es. Beefy "CAKE-WBNB" (norm: "cakewbnb") matcha
+            // LOCAL_CONTRACTS_DB "CAKE–WBNB (Uniswap)" (norm: "cakewbnbuniswap")
             const normVaultName = normalizeName(v.name);
-            const dbMatch = LOCAL_CONTRACTS_DB.find(
-              (dbEntry) => normalizeName(dbEntry.n) === normVaultName,
-            );
+            const dbMatch = LOCAL_CONTRACTS_DB.find((dbEntry) => {
+              const dbNorm = normalizeName(dbEntry.n);
+              return (
+                dbNorm === normVaultName ||
+                dbNorm.startsWith(normVaultName) ||
+                normVaultName.startsWith(dbNorm)
+              );
+            });
 
             if (dbMatch) {
               vaultObj.token0Name = dbMatch.t0;
@@ -1241,8 +1249,10 @@ export function useBeefyLive() {
 
             return vaultObj;
           })
-          .filter((v: any) => v.tvlRaw > 100 && v.apy > 0)
-          .sort((a: any, b: any) => b.tvlRaw - a.tvlRaw);
+          // Mostra solo le vault che hanno un match nel LOCAL_CONTRACTS_DB
+          // (le vault non curate — slisBNB-WBNB, axlUSDC-USDT, TST-WBNB, ecc. — vengono escluse)
+          .filter((v: BeefyVault) => v.token0Name !== undefined)
+          .sort((a: BeefyVault, b: BeefyVault) => b.tvlRaw - a.tvlRaw);
 
         setVaults(formatted);
         setGlobalTvl(computedBscTvl);
