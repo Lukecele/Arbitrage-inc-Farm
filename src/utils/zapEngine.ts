@@ -1,8 +1,6 @@
 // KyberSwap ZaaS API helper — BSC
 // Docs: https://docs.kyberswap.com/developer-guide/zap-as-a-service-zaas-api/api-reference/zaas-http-api
-
-const DEV_FEE_ADDRESS = "0xafF5340ECFaf7ce049261cff193f5FED6BDF04E7";
-const DEV_FEE_PCM = 200; // 0.2%
+import { DEV_FEE_ADDRESS, DEV_FEE_PCM } from "../lib/constants";
 
 export interface ZapRouteParams {
   poolAddress: string;

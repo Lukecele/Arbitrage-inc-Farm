@@ -278,5 +278,7 @@ export const DEX_OPTIONS = [
   { id: "DEX_UNISWAPV2", name: "Uniswap V2" },
 ];
 
-export const DEV_FEE_ADDRESS = "0x75f7f06a5c5c440c1adbd586826cd26253ede219";
-export const DEV_FEE_PCM = 100; // 1% = 100 bps per KyberSwap ZaaS convention
+// Indirizzo dev per la raccolta delle fee di protocollo
+export const DEV_FEE_ADDRESS = "0xafF5340ECFaf7ce049261cff193f5FED6BDF04E7";
+// feePcm: per cent mille KyberSwap (1 = 0.001%). 200 = 0.2%
+export const DEV_FEE_PCM = 200;
