@@ -26,10 +26,9 @@ export async function getZapInRoute({
   tickLower,
   tickUpper,
 }: ZapRouteParams) {
-  // Per V3 CLM i tick del range sono obbligatori; usiamo il full-range come default.
-  const isV3 = dex === "DEX_PANCAKESWAPV3" || dex === "DEX_UNISWAPV3";
-  const effectiveTickLower = isV3 ? (tickLower ?? -887200) : undefined;
-  const effectiveTickUpper = isV3 ? (tickUpper ?? 887200) : undefined;
+  // KyberSwap ZaaS richiede position.tickLower/tickUpper per tutti i DEX.
+  const effectiveTickLower = tickLower ?? -887200;
+  const effectiveTickUpper = tickUpper ?? 887200;
 
   const entries: Record<string, string> = {
     dex,

@@ -39,14 +39,10 @@ export function useZapInRoute(
           .parseUnits(amountIn, tokenInDecimals)
           .toString();
 
-        // Per V3 CLM i tick del range sono obbligatori.
-        // Se l'utente non ne ha selezionato uno, usiamo il full-range
-        // (-887200 / 887200 sono multipli di tutti i tick-spacing V3 comuni).
-        const isV3 =
-          targetPoolDex === "DEX_PANCAKESWAPV3" ||
-          targetPoolDex === "DEX_UNISWAPV3";
-        const effectiveTickLower = isV3 ? (tickLower ?? -887200) : undefined;
-        const effectiveTickUpper = isV3 ? (tickUpper ?? 887200) : undefined;
+        // KyberSwap ZaaS richiede position.tickLower/tickUpper per tutti i DEX
+        // (V3 e V2). Se non specificati usiamo il full-range come default.
+        const effectiveTickLower = tickLower ?? -887200;
+        const effectiveTickUpper = tickUpper ?? 887200;
 
         const response = await client.getZapInRoute({
           dex: targetPoolDex,
