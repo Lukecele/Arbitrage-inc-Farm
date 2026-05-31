@@ -67,7 +67,7 @@ export function useZapInRoute(
           positionParams["position.tickUpper"] = tickUpper ?? 886800;
         }
 
-        const response = await client.getZapInRoute({
+        const fullResponse = await client.getZapInRoute({
           dex: targetPoolDex,
           "pool.id": targetPoolId,
           ...positionParams,
@@ -78,7 +78,11 @@ export function useZapInRoute(
           feePcm: DEV_FEE_PCM,
         });
 
-        setRoute(response);
+        // KyberSwap returns { message:'OK', data:{...} } — extract inner data
+        const routeData = fullResponse?.data ?? fullResponse;
+        if (!routeData?.route)
+          throw new Error(fullResponse?.message || "Route not found");
+        setRoute(routeData);
       } catch (err: any) {
         console.error("Kyber ZaaS ZapIn failed", err);
         setError(err.message || "Route not found");
@@ -159,7 +163,7 @@ export function useZapOutRoute(
           return;
         }
 
-        const response = await client.getZapOutRoute({
+        const fullResponse = await client.getZapOutRoute({
           dexFrom: targetPoolDex,
           "poolFrom.id": targetPoolId,
           "positionFrom.id": positionFromId,
@@ -169,7 +173,10 @@ export function useZapOutRoute(
           feePcm: DEV_FEE_PCM,
         });
 
-        setRoute(response);
+        const routeData = fullResponse?.data ?? fullResponse;
+        if (!routeData?.route)
+          throw new Error(fullResponse?.message || "Route not found");
+        setRoute(routeData);
       } catch (err: any) {
         console.error("Kyber ZaaS ZapOut failed", err);
         setError(err.message || "Route not found");

@@ -57,7 +57,8 @@ export async function getZapInRoute({
   const url = `https://zap-api.kyberswap.com/bsc/api/v1/in/route?${new URLSearchParams(entries)}`;
   const res = await fetch(url, { headers: { "X-Client-Id": "Arbitrage-Inc" } });
   const result = await res.json();
-  if (result.code !== 0)
+  // KyberSwap success: { message: 'OK', data: {...} } — no 'code' field on success
+  if (!result.data)
     throw new Error(result.message || "Nessuna rotta Zap-In trovata.");
   return result.data;
 }
@@ -101,7 +102,7 @@ export async function getZapOutRoute({
   const url = `https://zap-api.kyberswap.com/bsc/api/v1/out/route?${new URLSearchParams(entries)}`;
   const res = await fetch(url, { headers: { "X-Client-Id": "Arbitrage-Inc" } });
   const result = await res.json();
-  if (result.code !== 0)
+  if (!result.data)
     throw new Error(result.message || "Nessuna rotta Zap-Out trovata.");
   return result.data;
 }
@@ -125,7 +126,7 @@ export async function buildZapTransaction(
     }),
   });
   const result = await res.json();
-  if (result.code !== 0)
+  if (!result.data)
     throw new Error(
       result.message || "Errore nella generazione del payload di transazione.",
     );
