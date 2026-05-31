@@ -9,6 +9,9 @@ export interface ZapRouteParams {
   dex: string;
   /** Numeric NFT token ID (V3 only). Required for ZapOut on V3 pools. */
   nftId?: string;
+  /** Tick range for ZapIn on V3. Defaults to full-range if omitted. */
+  tickLower?: number;
+  tickUpper?: number;
 }
 
 /**
@@ -20,8 +23,15 @@ export async function getZapInRoute({
   amountInRaw,
   slippageBps = 150,
   dex,
+  tickLower,
+  tickUpper,
 }: ZapRouteParams) {
-  const params = new URLSearchParams({
+  // Per V3 CLM i tick del range sono obbligatori; usiamo il full-range come default.
+  const isV3 = dex === "DEX_PANCAKESWAPV3" || dex === "DEX_UNISWAPV3";
+  const effectiveTickLower = isV3 ? (tickLower ?? -887200) : undefined;
+  const effectiveTickUpper = isV3 ? (tickUpper ?? 887200) : undefined;
+
+  const entries: Record<string, string> = {
     dex,
     "pool.id": poolAddress.toLowerCase(),
     tokensIn: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", // BNB nativo
@@ -29,7 +39,13 @@ export async function getZapInRoute({
     slippage: slippageBps.toString(),
     feeAddress: DEV_FEE_ADDRESS.toLowerCase(),
     feePcm: DEV_FEE_PCM.toString(),
-  });
+  };
+  if (effectiveTickLower !== undefined)
+    entries["position.tickLower"] = effectiveTickLower.toString();
+  if (effectiveTickUpper !== undefined)
+    entries["position.tickUpper"] = effectiveTickUpper.toString();
+
+  const params = new URLSearchParams(entries);
 
   const url = `https://zap-api.kyberswap.com/bsc/api/v1/in/route?${params.toString()}`;
   const response = await fetch(url, {

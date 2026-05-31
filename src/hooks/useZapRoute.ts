@@ -39,14 +39,23 @@ export function useZapInRoute(
           .parseUnits(amountIn, tokenInDecimals)
           .toString();
 
+        // Per V3 CLM i tick del range sono obbligatori.
+        // Se l'utente non ne ha selezionato uno, usiamo il full-range
+        // (-887200 / 887200 sono multipli di tutti i tick-spacing V3 comuni).
+        const isV3 =
+          targetPoolDex === "DEX_PANCAKESWAPV3" ||
+          targetPoolDex === "DEX_UNISWAPV3";
+        const effectiveTickLower = isV3 ? (tickLower ?? -887200) : undefined;
+        const effectiveTickUpper = isV3 ? (tickUpper ?? 887200) : undefined;
+
         const response = await client.getZapInRoute({
           dex: targetPoolDex,
           "pool.id": targetPoolId,
           tokensIn: tokenInAddress,
           amountsIn: parsedAmount,
           slippage: slippageBps,
-          "position.tickLower": tickLower,
-          "position.tickUpper": tickUpper,
+          "position.tickLower": effectiveTickLower,
+          "position.tickUpper": effectiveTickUpper,
           feeAddress: DEV_FEE_ADDRESS,
           feePcm: DEV_FEE_PCM,
         });
