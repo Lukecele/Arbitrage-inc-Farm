@@ -82,9 +82,15 @@ export class ZapApiClient {
     );
   }
 
+  // KyberSwap risponde sempre { message: 'OK', data: {...} }
+  // Tutti i metodi estraggono body.data per restituire il payload reale.
+
   async getZapInRoute(params: ZapInRouteParams) {
-    const { data } = await this.client.get("/api/v1/in/route", { params });
-    return data;
+    const { data: body } = await this.client.get("/api/v1/in/route", {
+      params,
+    });
+    if (!body.data) throw new Error(body.message || "ZapIn route failed");
+    return body.data;
   }
 
   async buildZapInTx(params: {
@@ -93,13 +99,20 @@ export class ZapApiClient {
     route: string;
     deadline?: number;
   }) {
-    const { data } = await this.client.post("/api/v1/in/route/build", params);
-    return data;
+    const { data: body } = await this.client.post(
+      "/api/v1/in/route/build",
+      params,
+    );
+    if (!body.data) throw new Error(body.message || "ZapIn build failed");
+    return body.data; // contiene routerAddress + callData
   }
 
   async getZapOutRoute(params: ZapOutRouteParams) {
-    const { data } = await this.client.get("/api/v1/out/route", { params });
-    return data;
+    const { data: body } = await this.client.get("/api/v1/out/route", {
+      params,
+    });
+    if (!body.data) throw new Error(body.message || "ZapOut route failed");
+    return body.data;
   }
 
   async buildZapOutTx(params: {
@@ -108,8 +121,12 @@ export class ZapApiClient {
     route: string;
     deadline?: number;
   }) {
-    const { data } = await this.client.post("/api/v1/out/route/build", params);
-    return data;
+    const { data: body } = await this.client.post(
+      "/api/v1/out/route/build",
+      params,
+    );
+    if (!body.data) throw new Error(body.message || "ZapOut build failed");
+    return body.data; // contiene routerAddress + callData
   }
 }
 
