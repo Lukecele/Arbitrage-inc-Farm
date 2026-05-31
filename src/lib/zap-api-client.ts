@@ -26,10 +26,9 @@ interface ZapInRouteParams {
 
 interface ZapOutRouteParams {
   dexFrom: string;
-  "pool_from.id": string;
-  "position_from.id"?: string; // NFT token ID numerico — solo per V3; ometti per V2 LP
-  tokens_to: string;
-  amountsIn?: string; // quantità LP da rimuovere — solo per V2
+  "poolFrom.id": string; // pool address (camelCase dot notation per docs ufficiali)
+  "positionFrom.id": string; // V3: NFT token ID | V2: user wallet address
+  tokenOut: string; // token address to receive
   slippage?: number;
   feeAddress?: string;
   feePcm?: number;

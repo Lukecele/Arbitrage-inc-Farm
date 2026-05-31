@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react";
+import { useConnectWallet } from "@web3-onboard/react";
 import { getDefaultZapClient } from "../lib/zap-api-client";
 import { ethers } from "ethers";
 import { DEV_FEE_ADDRESS, DEV_FEE_PCM } from "../lib/constants";
+
+// ─── ZapIn ───────────────────────────────────────────────────────────────────
+// Docs: https://docs.kyberswap.com/developer-guide/zap-as-a-service-zaas-api/api-reference/zaas-http-api
+//
+// position.id behaviour (from official docs):
+//   V3 new position  → omit position.id, provide tickLower + tickUpper
+//   V3 existing      → position.id = NFT token ID (number string)
+//   V2               → position.id = user wallet address
 
 export function useZapInRoute(
   tokenInAddress: string,
@@ -13,6 +22,9 @@ export function useZapInRoute(
   tickLower?: number,
   tickUpper?: number,
 ) {
+  const [{ wallet }] = useConnectWallet();
+  const userAddress = wallet?.accounts[0]?.address ?? "";
+
   const [route, setRoute] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,26 +51,36 @@ export function useZapInRoute(
           .parseUnits(amountIn, tokenInDecimals)
           .toString();
 
-        // KyberSwap ZaaS richiede position.tickLower/tickUpper per tutti i DEX
-        // (V3 e V2). Se non specificati usiamo il full-range come default.
-        const effectiveTickLower = tickLower ?? -887200;
-        const effectiveTickUpper = tickUpper ?? 887200;
+        const isV2 =
+          targetPoolDex === "DEX_PANCAKESWAPV2" ||
+          targetPoolDex === "DEX_UNISWAPV2";
+        const isV3 = !isV2;
+
+        // Build position params according to docs
+        const positionParams: Record<string, string | number | undefined> = {};
+        if (isV2) {
+          // V2: position.id must be the user wallet address
+          positionParams["position.id"] = userAddress;
+        } else {
+          // V3 new position: provide tick range (required by KyberSwap ZaaS)
+          positionParams["position.tickLower"] = tickLower ?? -886800;
+          positionParams["position.tickUpper"] = tickUpper ?? 886800;
+        }
 
         const response = await client.getZapInRoute({
           dex: targetPoolDex,
           "pool.id": targetPoolId,
+          ...positionParams,
           tokensIn: tokenInAddress,
           amountsIn: parsedAmount,
           slippage: slippageBps,
-          "position.tickLower": effectiveTickLower,
-          "position.tickUpper": effectiveTickUpper,
           feeAddress: DEV_FEE_ADDRESS,
           feePcm: DEV_FEE_PCM,
         });
 
         setRoute(response);
       } catch (err: any) {
-        console.error("Kyber ZaaS API failed", err);
+        console.error("Kyber ZaaS ZapIn failed", err);
         setError(err.message || "Route not found");
         setRoute(null);
       } finally {
@@ -66,7 +88,7 @@ export function useZapInRoute(
       }
     };
 
-    const timer = setTimeout(fetchRoute, 600); // Debounce to prevent API spam
+    const timer = setTimeout(fetchRoute, 600);
     return () => clearTimeout(timer);
   }, [
     tokenInAddress,
@@ -77,10 +99,19 @@ export function useZapInRoute(
     slippageBps,
     tickLower,
     tickUpper,
+    userAddress,
   ]);
 
   return { route, loading, error };
 }
+
+// ─── ZapOut ──────────────────────────────────────────────────────────────────
+// Docs: official parameter names use camelCase dot notation:
+//   poolFrom.id, positionFrom.id, tokenOut
+//
+// positionFrom.id behaviour:
+//   V3      → NFT token ID (numeric string, e.g. "42831")
+//   V2      → user wallet address
 
 export function useZapOutRoute(
   tokenOutAddress: string,
@@ -89,12 +120,15 @@ export function useZapOutRoute(
   nftPositionId: string,
   slippageBps: number,
 ) {
+  const [{ wallet }] = useConnectWallet();
+  const userAddress = wallet?.accounts[0]?.address ?? "";
+
   const [route, setRoute] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!nftPositionId || !tokenOutAddress || !targetPoolId) {
+    if (!tokenOutAddress || !targetPoolId) {
       setRoute(null);
       setError(null);
       return;
@@ -106,15 +140,30 @@ export function useZapOutRoute(
       try {
         const client = getDefaultZapClient();
 
-        // position_from.id deve essere un numero (NFT token ID per V3).
-        // Se nftPositionId non è numerico lo escludiamo (pool V2 LP, nessun NFT).
+        const isV2 =
+          targetPoolDex === "DEX_PANCAKESWAPV2" ||
+          targetPoolDex === "DEX_UNISWAPV2";
         const isNumericNftId = /^\d+$/.test(nftPositionId);
+
+        // For V2: positionFrom.id = user address
+        // For V3: positionFrom.id = numeric NFT token ID (if available)
+        const positionFromId = isV2
+          ? userAddress
+          : isNumericNftId
+            ? nftPositionId
+            : "";
+
+        if (!positionFromId) {
+          setRoute(null);
+          setError(null);
+          return;
+        }
 
         const response = await client.getZapOutRoute({
           dexFrom: targetPoolDex,
-          "pool_from.id": targetPoolId,
-          ...(isNumericNftId ? { "position_from.id": nftPositionId } : {}),
-          tokens_to: tokenOutAddress,
+          "poolFrom.id": targetPoolId,
+          "positionFrom.id": positionFromId,
+          tokenOut: tokenOutAddress,
           slippage: slippageBps,
           feeAddress: DEV_FEE_ADDRESS,
           feePcm: DEV_FEE_PCM,
@@ -122,7 +171,7 @@ export function useZapOutRoute(
 
         setRoute(response);
       } catch (err: any) {
-        console.error("Kyber ZaaS API failed", err);
+        console.error("Kyber ZaaS ZapOut failed", err);
         setError(err.message || "Route not found");
         setRoute(null);
       } finally {
@@ -138,6 +187,7 @@ export function useZapOutRoute(
     targetPoolDex,
     targetPoolId,
     slippageBps,
+    userAddress,
   ]);
 
   return { route, loading, error };
