@@ -43,7 +43,7 @@ export function useZapInRoute(
           feePcm: DEV_FEE_PCM
         });
         
-        setRoute(response.data);
+        setRoute(response);
       } catch (err: any) {
         console.error("Kyber ZaaS API failed", err);
         setError(err.message || "Route not found");
@@ -94,7 +94,7 @@ export function useZapOutRoute(
           feePcm: DEV_FEE_PCM
         });
         
-        setRoute(response.data);
+        setRoute(response);
       } catch (err: any) {
         console.error("Kyber ZaaS API failed", err);
         setError(err.message || "Route not found");

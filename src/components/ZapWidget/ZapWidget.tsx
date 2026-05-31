@@ -362,8 +362,8 @@ export default function ZapWidget({
         setTxModalParams({ isOpen: true, step: 2, message: `Confirm Zap ${tab} in Wallet...` });
         try {
             const tx = await signer.sendTransaction({
-              to: txData.data.routerAddress,
-              data: txData.data.callData,
+              to: txData.routerAddress,
+              data: txData.callData,
               value: tab === 'IN' && tokenIn.symbol === 'BNB' ? ethers.utils.parseUnits(amount, 18) : "0"
             });
             setTxHash(tx.hash);
