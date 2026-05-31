@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from "axios";
 
 export interface ZapApiConfig {
   apiDomain: string;
@@ -7,15 +7,15 @@ export interface ZapApiConfig {
 }
 
 const DEFAULT_CONFIG: ZapApiConfig = {
-  apiDomain: 'https://zap-api.kyberswap.com',
+  apiDomain: "https://zap-api.kyberswap.com",
   chainId: 56, // BSC as default
 };
 
 interface ZapInRouteParams {
   dex: string;
-  'pool.id': string;
-  'position.tickLower'?: number;
-  'position.tickUpper'?: number;
+  "pool.id": string;
+  "position.tickLower"?: number;
+  "position.tickUpper"?: number;
   tokensIn: string;
   amountsIn: string;
   slippage?: number;
@@ -26,9 +26,10 @@ interface ZapInRouteParams {
 
 interface ZapOutRouteParams {
   dexFrom: string;
-  'pool_from.id': string;
-  'position_from.id': string;
+  "pool_from.id": string;
+  "position_from.id"?: string; // NFT token ID numerico — solo per V3; ometti per V2 LP
   tokens_to: string;
+  amountsIn?: string; // quantità LP da rimuovere — solo per V2
   slippage?: number;
   feeAddress?: string;
   feePcm?: number;
@@ -43,27 +44,30 @@ export class ZapApiClient {
     this.config = { ...DEFAULT_CONFIG, ...config };
 
     const chainMap: Record<number, string> = {
-      1: 'ethereum',
-      56: 'bsc',
-      137: 'polygon',
-      42161: 'arbitrum',
-      10: 'optimism',
-      43114: 'avalanche',
-      250: 'fantom',
-      59144: 'linea',
-      324: 'zksync',
-      1101: 'polygon-zkevm',
-      8453: 'base',
+      1: "ethereum",
+      56: "bsc",
+      137: "polygon",
+      42161: "arbitrum",
+      10: "optimism",
+      43114: "avalanche",
+      250: "fantom",
+      59144: "linea",
+      324: "zksync",
+      1101: "polygon-zkevm",
+      8453: "base",
     };
-    const chainPath = chainMap[this.config.chainId] || this.config.chainId.toString();
+    const chainPath =
+      chainMap[this.config.chainId] || this.config.chainId.toString();
 
     this.client = axios.create({
       baseURL: `${this.config.apiDomain}/${chainPath}`,
       timeout: 30000,
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...(this.config.clientId ? { 'X-Client-Id': this.config.clientId } : {}),
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...(this.config.clientId
+          ? { "X-Client-Id": this.config.clientId }
+          : {}),
       },
     });
 
@@ -75,12 +79,12 @@ export class ZapApiClient {
           throw new Error(data?.message || data?.error || error.message);
         }
         throw new Error(error.message);
-      }
+      },
     );
   }
 
   async getZapInRoute(params: ZapInRouteParams) {
-    const { data } = await this.client.get('/api/v1/in/route', { params });
+    const { data } = await this.client.get("/api/v1/in/route", { params });
     return data;
   }
 
@@ -90,12 +94,12 @@ export class ZapApiClient {
     route: string;
     deadline?: number;
   }) {
-    const { data } = await this.client.post('/api/v1/in/route/build', params);
+    const { data } = await this.client.post("/api/v1/in/route/build", params);
     return data;
   }
 
   async getZapOutRoute(params: ZapOutRouteParams) {
-    const { data } = await this.client.get('/api/v1/out/route', { params });
+    const { data } = await this.client.get("/api/v1/out/route", { params });
     return data;
   }
 
@@ -105,7 +109,7 @@ export class ZapApiClient {
     route: string;
     deadline?: number;
   }) {
-    const { data } = await this.client.post('/api/v1/out/route/build', params);
+    const { data } = await this.client.post("/api/v1/out/route/build", params);
     return data;
   }
 }
